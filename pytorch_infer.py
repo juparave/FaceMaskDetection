@@ -142,7 +142,7 @@ if __name__ == "__main__":
     if args.img_mode:
         imgPath = args.img_path
         img = cv2.imread(imgPath)
-        # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         inference(img, show_result=True, target_shape=(360, 360))
     else:
         video_path = args.video_path
