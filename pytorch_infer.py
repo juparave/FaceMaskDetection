@@ -49,7 +49,7 @@ def inference(image,
     output_info = []
     height, width, _ = image.shape
     image_resized = cv2.resize(image, target_shape)
-    image_np = image_resized / 255.0  # 归一化到0~1
+    image_np = image_resized / 255.0  # Normalized to 0~1
     image_exp = np.expand_dims(image_np, axis=0)
 
     image_transposed = image_exp.transpose((0, 3, 1, 2))
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     if args.img_mode:
         imgPath = args.img_path
         img = cv2.imread(imgPath)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         inference(img, show_result=True, target_shape=(360, 360))
     else:
         video_path = args.video_path
