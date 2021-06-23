@@ -21,7 +21,8 @@ anchors = generate_anchors(feature_map_sizes, anchor_sizes, anchor_ratios)
 anchors_exp = np.expand_dims(anchors, axis=0)
 
 id2class = {0: 'Mask', 1: 'NoMask'}
-colors = ((0, 255, 0), (0, 0 , 255))
+colors = ((0, 255, 0), (0, 0, 255))
+
 
 def load_model(model_file, params_file, use_gpu=False, use_mkl=True, mkl_thread_num=4):
     config = fluid.core.AnalysisConfig(model_file, params_file)
@@ -40,13 +41,21 @@ def load_model(model_file, params_file, use_gpu=False, use_mkl=True, mkl_thread_
     predictor = fluid.core.create_paddle_predictor(config)
     return predictor
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Face Mask Detection")
+    parser.add_argument('--img-mode', type=int, default=1, help='set 1 to run on image, 0 to run on video.')
     parser.add_argument('--model_dir', type=str, default='models/paddle', help='model path')
+    parser.add_argument('--video-path', type=str, default='0', help='path to your video, `0` means to use camera.')
     args = parser.parse_args()
-    predictor = load_model(args.model_dir+"/__model__",args.model_dir+"/__params__")
-    cap = cv2.VideoCapture(0)
-    target_shape=(260, 260)
+    predictor = load_model(args.model_dir + "/__model__", args.model_dir + "/__params__")
+    video_path = args.video_path
+    if args.video_path == '0':
+        video_path = 0
+    if args.video_path == '1':
+        video_path = 1
+    cap = cv2.VideoCapture(video_path)
+    target_shape = (260, 260)
     while True:
         ret, img = cap.read()
         if not ret:
@@ -56,8 +65,8 @@ if __name__ == "__main__":
         height, width, _ = img.shape
         image_resized = cv2.resize(img, target_shape)
         image_np = image_resized / 255.0
-        image_np = image_np.transpose(2,0,1)
-        img = np.expand_dims(image_np,axis=0).copy()
+        image_np = image_np.transpose(2, 0, 1)
+        img = np.expand_dims(image_np, axis=0).copy()
         img = img.astype("float32")
         input_names = predictor.get_input_names()
         input_tensor = predictor.get_input_tensor(input_names[0])
@@ -88,6 +97,6 @@ if __name__ == "__main__":
             xmax = min(int(bbox[2] * width), width)
             ymax = min(int(bbox[3] * height), height)
             cv2.rectangle(show, (xmin, ymin), (xmax, ymax), colors[class_id], thickness=tl)
-            cv2.putText(show, "%s: %.2f" % (id2class[class_id], conf), (xmin + 2, ymin - 2),3, 0.8, colors[class_id])
-        cv2.imshow("img",show)
+            cv2.putText(show, "%s: %.2f" % (id2class[class_id], conf), (xmin + 2, ymin - 2), 3, 0.8, colors[class_id])
+        cv2.imshow("img", show)
         cv2.waitKey(1)

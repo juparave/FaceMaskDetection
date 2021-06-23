@@ -145,4 +145,6 @@ if __name__ == "__main__":
         video_path = args.video_path
         if args.video_path == '0':
             video_path = 0
+        if args.video_path == '1':
+            video_path = 1
         run_on_video(video_path, '', conf_thresh=0.5)

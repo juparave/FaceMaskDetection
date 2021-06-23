@@ -112,7 +112,7 @@ def run_on_video(video_path, output_video_name, conf_thresh):
         status, img_raw = cap.read()
         img_raw = cv2.cvtColor(img_raw, cv2.COLOR_BGR2RGB)
         read_frame_stamp = time.time()
-        if (status):
+        if status:
             inference(img_raw,
                       conf_thresh,
                       iou_thresh=0.5,
@@ -148,4 +148,6 @@ if __name__ == "__main__":
         video_path = args.video_path
         if args.video_path == '0':
             video_path = 0
+        if args.video_path == '1':
+            video_path = 1
         run_on_video(video_path, '', conf_thresh=0.5)

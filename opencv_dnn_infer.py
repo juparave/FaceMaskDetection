@@ -20,19 +20,21 @@ anchors_exp = np.expand_dims(anchors, axis=0)
 
 id2class = {0: 'Mask', 1: 'NoMask'}
 id2chiclass = {0: '您戴了口罩', 1: '您没有戴口罩'}
-colors = ((0, 255, 0), (255, 0 , 0))
+colors = ((0, 255, 0), (255, 0, 0))
+
 
 def puttext_chinese(img, text, point, color):
     pilimg = Image.fromarray(img)
     draw = ImageDraw.Draw(pilimg)  # 图片上打印汉字
-    fontsize = int(min(img.shape[:2])*0.04)
+    fontsize = int(min(img.shape[:2]) * 0.04)
     font = ImageFont.truetype("simhei.ttf", fontsize, encoding="utf-8")
-    y = point[1]-font.getsize(text)[1]
+    y = point[1] - font.getsize(text)[1]
     if y <= font.getsize(text)[1]:
-        y = point[1]+font.getsize(text)[1]
+        y = point[1] + font.getsize(text)[1]
     draw.text((point[0], y), text, color, font=font)
     img = np.asarray(pilimg)
     return img
+
 
 def getOutputsNames(net):
     # Get the names of all the layers in the network
@@ -40,9 +42,10 @@ def getOutputsNames(net):
     # Get the names of the output layers, i.e. the layers with unconnected outputs
     return [layersNames[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
+
 def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 160), draw_result=True, chinese=False):
     height, width, _ = image.shape
-    blob = cv2.dnn.blobFromImage(image, scalefactor=1/255.0, size=target_shape)
+    blob = cv2.dnn.blobFromImage(image, scalefactor=1 / 255.0, size=target_shape)
     net.setInput(blob)
     y_bboxes_output, y_cls_output = net.forward(getOutputsNames(net))
     # remove the batch dimension, for batch is always 1 for inference.
@@ -53,7 +56,8 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
     bbox_max_score_classes = np.argmax(y_cls, axis=1)
 
     # keep_idx is the alive bounding box after nms.
-    keep_idxs = single_class_non_max_suppression(y_bboxes, bbox_max_scores, conf_thresh=conf_thresh, iou_thresh=iou_thresh)
+    keep_idxs = single_class_non_max_suppression(y_bboxes, bbox_max_scores, conf_thresh=conf_thresh,
+                                                 iou_thresh=iou_thresh)
     # keep_idxs  = cv2.dnn.NMSBoxes(y_bboxes.tolist(), bbox_max_scores.tolist(), conf_thresh, iou_thresh)[:,0]
     tl = round(0.002 * (height + width) * 0.5) + 1  # line thickness
     for idx in keep_idxs:
@@ -68,11 +72,13 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
         if draw_result:
             cv2.rectangle(image, (xmin, ymin), (xmax, ymax), colors[class_id], thickness=tl)
             if chinese:
-                image = puttext_chinese(image, id2chiclass[class_id], (xmin, ymin), colors[class_id])  ###puttext_chinese
+                image = puttext_chinese(image, id2chiclass[class_id], (xmin, ymin),
+                                        colors[class_id])  ###puttext_chinese
             else:
                 cv2.putText(image, "%s: %.2f" % (id2class[class_id], conf), (xmin + 2, ymin - 2),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, colors[class_id])
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, colors[class_id])
     return image
+
 
 def run_on_video(Net, video_path, conf_thresh=0.5):
     cap = cv2.VideoCapture(video_path)
@@ -87,9 +93,10 @@ def run_on_video(Net, video_path, conf_thresh=0.5):
             break
         img_raw = cv2.cvtColor(img_raw, cv2.COLOR_BGR2RGB)
         img_raw = inference(Net, img_raw, target_shape=(260, 260), conf_thresh=conf_thresh)
-        cv2.imshow('image', img_raw[:,:,::-1])
+        cv2.imshow('image', img_raw[:, :, ::-1])
         cv2.waitKey(1)
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Face Mask Detection")
@@ -107,11 +114,13 @@ if __name__ == "__main__":
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         result = inference(Net, img, target_shape=(260, 260))
         cv2.namedWindow('detect', cv2.WINDOW_NORMAL)
-        cv2.imshow('detect', result[:,:,::-1])
+        cv2.imshow('detect', result[:, :, ::-1])
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     else:
         video_path = args.video_path
         if args.video_path == '0':
             video_path = 0
+        if args.video_path == '1':
+            video_path = 1
         run_on_video(Net, video_path, conf_thresh=0.5)
