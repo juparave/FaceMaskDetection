@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import cv2
 import argparse
 import numpy as np
@@ -18,7 +20,7 @@ anchors = generate_anchors(feature_map_sizes, anchor_sizes, anchor_ratios)
 # so we expand dim for anchors to [1, anchor_num, 4]
 anchors_exp = np.expand_dims(anchors, axis=0)
 
-id2class = {0: 'Mask', 1: 'NoMask'}
+id2class = {0: 'Mascarilla', 1: 'SinMasc'}
 id2chiclass = {0: '您戴了口罩', 1: '您没有戴口罩'}
 colors = ((0, 255, 0), (255, 0, 0))
 
@@ -59,10 +61,13 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
     keep_idxs = single_class_non_max_suppression(y_bboxes, bbox_max_scores, conf_thresh=conf_thresh,
                                                  iou_thresh=iou_thresh)
     # keep_idxs  = cv2.dnn.NMSBoxes(y_bboxes.tolist(), bbox_max_scores.tolist(), conf_thresh, iou_thresh)[:,0]
+    masked = 0
     tl = round(0.002 * (height + width) * 0.5) + 1  # line thickness
     for idx in keep_idxs:
         conf = float(bbox_max_scores[idx])
         class_id = bbox_max_score_classes[idx]
+        if class_id == 0:
+            masked += 1
         bbox = y_bboxes[idx]
         # clip the coordinate, avoid the value exceed the image boundary.
         xmin = max(0, int(bbox[0] * width))
@@ -77,7 +82,7 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
             else:
                 cv2.putText(image, "%s: %.2f" % (id2class[class_id], conf), (xmin + 2, ymin - 2),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, colors[class_id])
-    return image
+    return image, len(keep_idxs), masked
 
 
 def run_on_video(Net, video_path, conf_thresh=0.5):
@@ -86,13 +91,22 @@ def run_on_video(Net, video_path, conf_thresh=0.5):
         raise ValueError("Video open failed.")
         return
     status = True
+    # add date to frame
+    font = cv2.FONT_HERSHEY_SIMPLEX
     while status:
         status, img_raw = cap.read()
         if not status:
             print("Done processing !!!")
             break
+        date_text = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+        img_raw = cv2.rectangle(img_raw, pt1=(0, 0), pt2=(850, 59), color=(0, 0, 0), thickness=-1)
+        img_raw = cv2.putText(img_raw, date_text, (10, 40), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
         img_raw = cv2.cvtColor(img_raw, cv2.COLOR_BGR2RGB)
-        img_raw = inference(Net, img_raw, target_shape=(260, 260), conf_thresh=conf_thresh)
+        img_raw, faces, masked = inference(Net, img_raw, target_shape=(260, 260), conf_thresh=conf_thresh)
+        # write how many faces where found
+        img_raw = cv2.putText(img_raw, "Caras {}".format(faces), (400, 40), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
+        img_raw = cv2.putText(img_raw, "Mascarillas {}".format(masked), (550, 40), font, 1, (255, 0, 255), 2, cv2.LINE_AA)
+
         cv2.imshow('image', img_raw[:, :, ::-1])
         cv2.waitKey(1)
     cv2.destroyAllWindows()
