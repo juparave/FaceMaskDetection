@@ -1,0 +1,120 @@
+## detector de Cubrebocas
+## para correrlo en ambiente python > 3.7
+## $ python opencv_dnn_infer.py --img-mode 0 --video-path 0
+
+from datetime import datetime
+
+import cv2
+import argparse
+import numpy as np
+from utils.anchor_generator import generate_anchors
+from utils.anchor_decode import decode_bbox
+from utils.nms import single_class_non_max_suppression
+
+feature_map_sizes = [[33, 33], [17, 17], [9, 9], [5, 5], [3, 3]]
+anchor_sizes = [[0.04, 0.056], [0.08, 0.11], [0.16, 0.22], [0.32, 0.45], [0.64, 0.72]]
+anchor_ratios = [[1, 0.62, 0.42]] * 5
+
+anchors = generate_anchors(feature_map_sizes, anchor_sizes, anchor_ratios)
+anchors_exp = np.expand_dims(anchors, axis=0)
+
+id2class = {0: 'Mascarilla', 1: 'SinMasc'}
+colors = ((0, 255, 0), (255, 0, 0))
+
+
+def get_outputs_names(net):
+    # Get the names of all the layers in the network
+    layers_names = net.getLayerNames()
+    # Get the names of the output layers, i.e. the layers with unconnected outputs
+    return [layers_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+
+
+def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 160), draw_result=True, chinese=False):
+    height, width, _ = image.shape
+    blob = cv2.dnn.blobFromImage(image, scalefactor=1 / 255.0, size=target_shape)
+    net.setInput(blob)
+    y_bboxes_output, y_cls_output = net.forward(get_outputs_names(net))
+    # remove the batch dimension, for batch is always 1 for inference.
+    y_bboxes = decode_bbox(anchors_exp, y_bboxes_output)[0]
+    y_cls = y_cls_output[0]
+    # To speed up, do single class NMS, not multiple classes NMS.
+    bbox_max_scores = np.max(y_cls, axis=1)
+    bbox_max_score_classes = np.argmax(y_cls, axis=1)
+
+    # keep_idx is the alive bounding box after nms.
+    keep_idxs = single_class_non_max_suppression(y_bboxes, bbox_max_scores, conf_thresh=conf_thresh,
+                                                 iou_thresh=iou_thresh)
+    # keep_idxs  = cv2.dnn.NMSBoxes(y_bboxes.tolist(), bbox_max_scores.tolist(), conf_thresh, iou_thresh)[:,0]
+    masked = 0
+    tl = round(0.002 * (height + width) * 0.5) + 1  # line thickness
+    for idx in keep_idxs:
+        conf = float(bbox_max_scores[idx])
+        class_id = bbox_max_score_classes[idx]
+        if class_id == 0:
+            masked += 1
+        bbox = y_bboxes[idx]
+        # clip the coordinate, avoid the value exceed the image boundary.
+        xmin = max(0, int(bbox[0] * width))
+        ymin = max(0, int(bbox[1] * height))
+        xmax = min(int(bbox[2] * width), width)
+        ymax = min(int(bbox[3] * height), height)
+        if draw_result:
+            cv2.rectangle(image, (xmin, ymin), (xmax, ymax), colors[class_id], thickness=tl)
+            cv2.putText(image, "%s: %.2f" % (id2class[class_id], conf), (xmin + 2, ymin - 2),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, colors[class_id])
+    return image, len(keep_idxs), masked
+
+
+def run_on_video(Net, video_path, conf_thresh=0.5):
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise ValueError("Falla al abrir video.")
+        return
+    status = True
+    # add date to frame
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    while status:
+        status, img_raw = cap.read()
+        if not status:
+            print("Fin de proceso !!!")
+            break
+        date_text = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+        img_raw = cv2.rectangle(img_raw, pt1=(0, 0), pt2=(850, 59), color=(0, 0, 0), thickness=-1)
+        img_raw = cv2.putText(img_raw, date_text, (10, 40), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
+        img_raw = cv2.cvtColor(img_raw, cv2.COLOR_BGR2RGB)
+        img_raw, faces, masked = inference(Net, img_raw, target_shape=(260, 260), conf_thresh=conf_thresh)
+        # write how many faces where found
+        img_raw = cv2.putText(img_raw, "Caras {}".format(faces), (400, 40), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
+        img_raw = cv2.putText(img_raw, "Mascarillas {}".format(masked), (550, 40), font, 1, (255, 0, 255), 2,
+                              cv2.LINE_AA)
+
+        cv2.imshow('image', img_raw[:, :, ::-1])
+        cv2.waitKey(1)
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Detector de Cubrebocas")
+    parser.add_argument('--proto', type=str, default='models/face_mask_detection.prototxt', help='prototxt path')
+    parser.add_argument('--model', type=str, default='models/face_mask_detection.caffemodel', help='model path')
+    parser.add_argument('--img-mode', type=int, default=0, help=u'1 para correr en fotografía, 0 para video.')
+    parser.add_argument('--img-path', type=str, default='img/demo2.jpg', help=u'fotografía a analizar.')
+    parser.add_argument('--video-path', type=str, default='0', help=u'video, `0` usar cámara.')
+    args = parser.parse_args()
+
+    Net = cv2.dnn.readNet(args.model, args.proto)
+    if args.img_mode:
+        img = cv2.imread(args.img_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        result = inference(Net, img, target_shape=(260, 260))
+        cv2.namedWindow('detect', cv2.WINDOW_NORMAL)
+        cv2.imshow('detect', result[:, :, ::-1])
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    else:
+        video_path = args.video_path
+        if args.video_path == '0':
+            video_path = 0
+        if args.video_path == '1':
+            video_path = 1
+        run_on_video(Net, video_path, conf_thresh=0.5)
