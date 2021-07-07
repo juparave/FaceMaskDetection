@@ -15,3 +15,6 @@ def do_led():
         time.sleep(1)
     except RuntimeError as ex:
         print("Error prendiendo el led: {}".format(ex))
+    finally:
+        GPIO.cleanup()
+        print("GPIO.cleanup() ejecutado")

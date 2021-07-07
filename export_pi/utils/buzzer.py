@@ -10,8 +10,7 @@ GPIO.setup(pin_buzz, GPIO.OUT)  # Configuramos el GPIO18 como salida
 def do_buzzer():
     # Contenemos el código principal en una estructura try para limpiar los GPIO al terminar o presentarse un error
     try:
-        while 1:  # Implementamos un loop infinito
-            GPIO.output(pin_buzz, GPIO.HIGH)  # Ponemos en alto el pin del buzzer
+        GPIO.output(pin_buzz, GPIO.HIGH)  # Ponemos en alto el pin del buzzer
         time.sleep(1)  # Esperamos un segundo antes de ejecutar la siguiente línea
         GPIO.output(pin_buzz, GPIO.LOW)  # Ponemos en alto el pin del buzzer
         time.sleep(4)  # Esperamos cuatro segundos antes de ejecutar la siguiente línea
@@ -19,8 +18,8 @@ def do_buzzer():
     except KeyboardInterrupt:
         # CTRL+C
         print("\nInterrupcion por teclado")
-    except Exception:
-        print("Otra interrupcion")
+    except Exception as ex:
+        print("Otra interrupcion: {}".format(ex))
     finally:
         GPIO.cleanup()
         print("GPIO.cleanup() ejecutado")
