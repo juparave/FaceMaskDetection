@@ -14,10 +14,8 @@ from utils.anchor_decode import decode_bbox
 from utils.nms import single_class_non_max_suppression
 
 if is_raspberrypi():
-    import RPi.GPIO as GPIO
-    from gpiozero import Buzzer
-    from time import sleep
-    buzzer = Buzzer(17)
+    from utils.buzzer import do_buzzer
+    from utils.led import do_led
     print("Running on PI!")
 
 feature_map_sizes = [[33, 33], [17, 17], [9, 9], [5, 5], [3, 3]]
@@ -63,7 +61,8 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
             masked += 1
         else:
             if is_raspberrypi():
-                buzzer.beep()
+                do_buzzer()
+                do_led()
         bbox = y_bboxes[idx]
         # clip the coordinate, avoid the value exceed the image boundary.
         xmin = max(0, int(bbox[0] * width))
