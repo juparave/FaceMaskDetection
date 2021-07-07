@@ -7,9 +7,18 @@ from datetime import datetime
 import cv2
 import argparse
 import numpy as np
+
+from utils import is_raspberrypi
 from utils.anchor_generator import generate_anchors
 from utils.anchor_decode import decode_bbox
 from utils.nms import single_class_non_max_suppression
+
+if is_raspberrypi():
+    import RPi.GPIO as GPIO
+    from gpiozero import Buzzer
+    from time import sleep
+    buzzer = Buzzer(17)
+    print("Running on PI!")
 
 feature_map_sizes = [[33, 33], [17, 17], [9, 9], [5, 5], [3, 3]]
 anchor_sizes = [[0.04, 0.056], [0.08, 0.11], [0.16, 0.22], [0.32, 0.45], [0.64, 0.72]]
@@ -53,7 +62,8 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
         if class_id == 0:
             masked += 1
         else:
-            # code to activate buzzer  <--- aqui
+            if is_raspberrypi():
+                buzzer.beep()
         bbox = y_bboxes[idx]
         # clip the coordinate, avoid the value exceed the image boundary.
         xmin = max(0, int(bbox[0] * width))
@@ -95,6 +105,21 @@ def run_on_video(Net, video_path, conf_thresh=0.5):
     cv2.destroyAllWindows()
 
 
+def do_local_tests(Net):
+    from os import listdir
+    from os.path import isfile, join
+    test_path = 'tests'
+    onlyfjpgiles = [f for f in listdir(test_path) if isfile(join(test_path, f)) and 'jpg' in f]
+
+    for jpg in onlyfjpgiles:
+        img = cv2.imread(join(test_path, jpg))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        result, faces, masked = inference(Net, img, target_shape=(260, 260))
+        print("For {} \n \t Faces: {} \t Masks: {}".format(jpg, faces, masked))
+
+    print("\nEnd")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Detector de Cubrebocas")
     parser.add_argument('--proto', type=str, default='models/face_mask_detection.prototxt', help='prototxt path')
@@ -102,9 +127,14 @@ if __name__ == "__main__":
     parser.add_argument('--img-mode', type=int, default=0, help=u'1 para correr en fotografía, 0 para video.')
     parser.add_argument('--img-path', type=str, default='img/demo2.jpg', help=u'fotografía a analizar.')
     parser.add_argument('--video-path', type=str, default='0', help=u'video, `0` usar cámara.')
+    parser.add_argument('--test', type=str, default='0', help=u'pruebas locales.')
     args = parser.parse_args()
 
     Net = cv2.dnn.readNet(args.model, args.proto)
+    if args.test:
+        do_local_tests(Net)
+        exit(0)
+
     if args.img_mode:
         img = cv2.imread(args.img_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
