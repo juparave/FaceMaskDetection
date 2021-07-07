@@ -3,7 +3,7 @@ import RPi.GPIO as GPIO  # Importamos el paquete RPi.GPIO y en el código nos re
 
 pin_buzz = 18  # Variable que contiene el pin(GPIO.BCM) al cual conectamos la señal del LED
 
-GPIO.setmode(GPIO.BCM)  # Establecemos el modo según el cual nos referiremos a los GPIO de nuestra RPi
+GPIO.setmode(GPIO.BOARD)  # Establecemos el modo según el cual nos referiremos a los GPIO de nuestra RPi
 GPIO.setup(pin_buzz, GPIO.OUT)  # Configuramos el GPIO18 como salida
 
 
