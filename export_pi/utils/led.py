@@ -1,12 +1,17 @@
 import RPi.GPIO as GPIO
 import time
 
+pin_led = 7
+
 GPIO.setmode(GPIO.BOARD)
-GPIO.setup(7, GPIO.OUT)
+GPIO.setup(pin_led, GPIO.OUT)
 
 
 def do_led():
-    GPIO.output(7, True)
-    time.sleep(1)
-    GPIO.output(7, False)
-    time.sleep(1)
+    try:
+        GPIO.output(7, True)
+        time.sleep(1)
+        GPIO.output(7, False)
+        time.sleep(1)
+    except RuntimeError as ex:
+        print("Error prendiendo el led: {}".format(ex))
