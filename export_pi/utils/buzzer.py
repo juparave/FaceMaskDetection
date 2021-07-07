@@ -19,7 +19,7 @@ def do_buzzer():
         # CTRL+C
         print("\nInterrupcion por teclado")
     except Exception as ex:
-        print("Otra interrupcion: {}".format(ex))
+        print("Error sonando la chicharra: {}".format(ex))
     finally:
         GPIO.cleanup()
         print("GPIO.cleanup() ejecutado")
