@@ -52,6 +52,8 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
         class_id = bbox_max_score_classes[idx]
         if class_id == 0:
             masked += 1
+        else:
+            # code to activate buzzer  <--- aqui
         bbox = y_bboxes[idx]
         # clip the coordinate, avoid the value exceed the image boundary.
         xmin = max(0, int(bbox[0] * width))
@@ -106,7 +108,7 @@ if __name__ == "__main__":
     if args.img_mode:
         img = cv2.imread(args.img_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        result = inference(Net, img, target_shape=(260, 260))
+        result, faces, masked = inference(Net, img, target_shape=(260, 260))
         cv2.namedWindow('detect', cv2.WINDOW_NORMAL)
         cv2.imshow('detect', result[:, :, ::-1])
         cv2.waitKey(0)
