@@ -4,10 +4,12 @@
 
 from datetime import datetime
 
+import sys
 import cv2
 import argparse
 import numpy as np
 
+import utils.tvservice as tvservice
 from utils import is_raspberrypi
 from utils.anchor_generator import generate_anchors
 from utils.anchor_decode import decode_bbox
@@ -27,6 +29,25 @@ anchors_exp = np.expand_dims(anchors, axis=0)
 
 id2class = {0: 'Mascarilla', 1: 'SinMasc'}
 colors = ((0, 255, 0), (255, 0, 0))
+
+
+def show_status():
+    # ref: https://programtalk.com/vs2/?source=python/2635/pyLCI/apps/raspberrypi/tvservice/main.py
+    try:
+        status = tvservice.status()
+    except (IndexError, KeyError) as ex:
+        print("Unknown video mode")
+        return False
+    mode = status['mode']
+    if mode == 'UNKNOWN':
+        print("Unknown mode")
+        return False
+    if mode == 'NONE':
+        print("No video out", "active")
+        return False
+    if mode in ('HDMI', 'TV'):
+        print("Video out active")
+        return True
 
 
 def get_outputs_names(net):
@@ -61,8 +82,9 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
             masked += 1
         else:
             if is_raspberrypi():
-                do_buzzer()
-                do_led()
+                # do_buzzer()
+                # do_led()
+                pass
         bbox = y_bboxes[idx]
         # clip the coordinate, avoid the value exceed the image boundary.
         xmin = max(0, int(bbox[0] * width))
@@ -82,6 +104,7 @@ def run_on_video(Net, video_path, conf_thresh=0.5):
         raise ValueError("Falla al abrir video.")
         return
     status = True
+    show_status_status = None  # is a monitor connected?
     # add date to frame
     font = cv2.FONT_HERSHEY_SIMPLEX
     while status:
@@ -98,9 +121,16 @@ def run_on_video(Net, video_path, conf_thresh=0.5):
         img_raw = cv2.putText(img_raw, "Caras {}".format(faces), (400, 40), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
         img_raw = cv2.putText(img_raw, "Mascarillas {}".format(masked), (550, 40), font, 1, (255, 0, 255), 2,
                               cv2.LINE_AA)
+        if show_status_status is None:
+            show_status_status = show_status()
 
-        cv2.imshow('image', img_raw[:, :, ::-1])
-        cv2.waitKey(1)
+        if show_status_status:
+            try:
+                cv2.imshow('image', img_raw[:, :, ::-1])
+            except cv2.error as ex:
+                print("Error al mostrar video: {}".format(ex))
+            cv2.waitKey(1)
+        print("faces: {}, masked: {}".format(faces, masked), end='\r')
     cv2.destroyAllWindows()
 
 
@@ -108,13 +138,14 @@ def do_local_tests(Net):
     from os import listdir
     from os.path import isfile, join
     test_path = 'tests'
-    onlyfjpgiles = [f for f in listdir(test_path) if isfile(join(test_path, f)) and 'jpg' in f]
+    onlyjpgfiles = [f for f in listdir(test_path) if isfile(join(test_path, f)) and 'jpg' in f]
 
-    for jpg in onlyfjpgiles:
+    for jpg in onlyjpgfiles:
         img = cv2.imread(join(test_path, jpg))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        result, faces, masked = inference(Net, img, target_shape=(260, 260))
-        print("For {} \n \t Faces: {} \t Masks: {}".format(jpg, faces, masked))
+        if img is not None:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            result, faces, masked = inference(Net, img, target_shape=(260, 260))
+            print("For {} \n \t Faces: {} \t Masks: {}".format(jpg, faces, masked))
 
     print("\nEnd")
 
@@ -126,26 +157,35 @@ if __name__ == "__main__":
     parser.add_argument('--img-mode', type=int, default=0, help=u'1 para correr en fotografía, 0 para video.')
     parser.add_argument('--img-path', type=str, default='img/demo2.jpg', help=u'fotografía a analizar.')
     parser.add_argument('--video-path', type=str, default='0', help=u'video, `0` usar cámara.')
-    parser.add_argument('--test', type=str, default='0', help=u'pruebas locales.')
+    parser.add_argument('--test', type=str, default='', help=u'pruebas locales.')
     args = parser.parse_args()
 
-    Net = cv2.dnn.readNet(args.model, args.proto)
-    if args.test:
-        do_local_tests(Net)
-        exit(0)
+    try:
+        # hide cursor
+        sys.stdout.write("\033[?25l")
+        sys.stdout.flush()
 
-    if args.img_mode:
-        img = cv2.imread(args.img_path)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        result, faces, masked = inference(Net, img, target_shape=(260, 260))
-        cv2.namedWindow('detect', cv2.WINDOW_NORMAL)
-        cv2.imshow('detect', result[:, :, ::-1])
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    else:
-        video_path = args.video_path
-        if args.video_path == '0':
-            video_path = 0
-        if args.video_path == '1':
-            video_path = 1
-        run_on_video(Net, video_path, conf_thresh=0.5)
+        Net = cv2.dnn.readNet(args.model, args.proto)
+        if args.test:
+            do_local_tests(Net)
+            exit(0)
+
+        if args.img_mode:
+            img = cv2.imread(args.img_path)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            result, faces, masked = inference(Net, img, target_shape=(260, 260))
+            cv2.namedWindow('detect', cv2.WINDOW_NORMAL)
+            cv2.imshow('detect', result[:, :, ::-1])
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+        else:
+            video_path = args.video_path
+            if args.video_path == '0':
+                video_path = 0
+            if args.video_path == '1':
+                video_path = 1
+            run_on_video(Net, video_path, conf_thresh=0.5)
+    finally:
+        # show cursor
+        sys.stdout.write("\033[?25h")
+        sys.stdout.flush()
