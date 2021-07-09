@@ -1,3 +1,4 @@
+import threading
 import time
 import RPi.GPIO as GPIO  # Importamos el paquete RPi.GPIO y en el código nos refiriremos a el como GPIO
 
@@ -5,6 +6,15 @@ pin_buzz = 18  # Variable que contiene el pin(GPIO.BCM) al cual conectamos la se
 
 GPIO.setmode(GPIO.BOARD)  # Establecemos el modo según el cual nos referiremos a los GPIO de nuestra RPi
 GPIO.setup(pin_buzz, GPIO.OUT)  # Configuramos el GPIO18 como salida
+
+
+def buzzer(self, buzzer_event):
+    GPIO.output(pin_buzz, GPIO.LOW)
+    # GPIO.output(WATCHDOG_LED,GPIO.HIGH)
+    time.sleep(0.2)
+    GPIO.output(pin_buzz, GPIO.HIGH)
+    # GPIO.output(WATCHDOG_LED,GPIO.LOW)
+    buzzer_event.clear()
 
 
 def do_buzzer():
