@@ -41,8 +41,8 @@ def set_mode(group, mode, drive):
 
 def status():
     """-s, --status                      Get HDMI status"""
-    output = tvservice_command("-s")  # See example outputs at the bottom
-    output = str(output).strip('\n').strip(' ')
+    output = tvservice_command("-s").decode('utf-8')  # See example outputs at the bottom
+    output = output.strip('\n').strip(' ')
     # First, we get the state flags and then parse everything according to which flags are set (since tvservice -s output is a little flag-specific)
     state = output.split('[')[0]
     state_value_str = state.split(' ')[1].strip(' ')
@@ -62,10 +62,10 @@ def status():
     # Now going through mode-specific parameters
     if hdmi_port_active:
         result["mode"] = "HDMI"
-        drive, group, mode_str, color_scheme, something, ratio = state_params.split(" ", 5)
-        result["ratio"] = ratio
-        mode = mode_str.strip("()")
-        result["gmd"] = (group, mode, drive)
+        # drive, group, mode_str, color_scheme, something, ratio = state_params.split(" ", 6)
+        # result["ratio"] = ratio
+        # mode = mode_str.strip("()")
+        # result["gmd"] = (group, mode, drive)
     elif tv_out_active:
         result["mode"] = "TV"
         mode, ratio = state_params.split(" ", 2)

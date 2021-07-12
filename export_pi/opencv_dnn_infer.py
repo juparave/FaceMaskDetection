@@ -4,7 +4,11 @@
 
 from datetime import datetime
 
+import threading
+
 import sys
+from threading import Event
+
 import cv2
 import argparse
 import numpy as np
@@ -18,6 +22,7 @@ from utils.nms import single_class_non_max_suppression
 if is_raspberrypi():
     from utils.buzzer import do_buzzer
     from utils.led import do_led
+
     print("Running on PI!")
 
 feature_map_sizes = [[33, 33], [17, 17], [9, 9], [5, 5], [3, 3]]
@@ -57,7 +62,8 @@ def get_outputs_names(net):
     return [layers_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
 
-def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 160), draw_result=True, chinese=False):
+def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 160), draw_result=True, led_event=None,
+              buzzer_event=None):
     height, width, _ = image.shape
     blob = cv2.dnn.blobFromImage(image, scalefactor=1 / 255.0, size=target_shape)
     net.setInput(blob)
@@ -82,8 +88,8 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
             masked += 1
         else:
             if is_raspberrypi():
-                # do_buzzer()
-                # do_led()
+                do_buzzer(buzzer_event)
+                do_led(led_event)
                 pass
         bbox = y_bboxes[idx]
         # clip the coordinate, avoid the value exceed the image boundary.
@@ -98,7 +104,7 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
     return image, len(keep_idxs), masked
 
 
-def run_on_video(Net, video_path, conf_thresh=0.5):
+def run_on_video(Net, video_path, conf_thresh=0.5, led_event=None, buzzer_event=None):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise ValueError("Falla al abrir video.")
@@ -116,7 +122,8 @@ def run_on_video(Net, video_path, conf_thresh=0.5):
         img_raw = cv2.rectangle(img_raw, pt1=(0, 0), pt2=(850, 59), color=(0, 0, 0), thickness=-1)
         img_raw = cv2.putText(img_raw, date_text, (10, 40), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
         img_raw = cv2.cvtColor(img_raw, cv2.COLOR_BGR2RGB)
-        img_raw, faces, masked = inference(Net, img_raw, target_shape=(260, 260), conf_thresh=conf_thresh)
+        img_raw, faces, masked = inference(Net, img_raw, target_shape=(260, 260), conf_thresh=conf_thresh,
+                                           led_event=led_event, buzzer_event=buzzer_event)
         # write how many faces where found
         img_raw = cv2.putText(img_raw, "Caras {}".format(faces), (400, 40), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
         img_raw = cv2.putText(img_raw, "Mascarillas {}".format(masked), (550, 40), font, 1, (255, 0, 255), 2,
@@ -165,6 +172,10 @@ if __name__ == "__main__":
         sys.stdout.write("\033[?25l")
         sys.stdout.flush()
 
+        # create threads events
+        led_event = threading.Event()
+        buzzer_event = threading.Event()
+
         Net = cv2.dnn.readNet(args.model, args.proto)
         if args.test:
             do_local_tests(Net)
@@ -184,7 +195,11 @@ if __name__ == "__main__":
                 video_path = 0
             if args.video_path == '1':
                 video_path = 1
-            run_on_video(Net, video_path, conf_thresh=0.5)
+
+            # blink led twice to signal start on video
+            do_led(led_event, True)
+
+            run_on_video(Net, video_path, conf_thresh=0.5, led_event=led_event, buzzer_event=buzzer_event)
     finally:
         # show cursor
         sys.stdout.write("\033[?25h")
