@@ -106,6 +106,7 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
 
 def run_on_video(Net, video_path, conf_thresh=0.5, led_event=None, buzzer_event=None):
     cap = cv2.VideoCapture(video_path)
+    dim = None
     if not cap.isOpened():
         raise ValueError("Falla al abrir video.")
         return
@@ -115,6 +116,10 @@ def run_on_video(Net, video_path, conf_thresh=0.5, led_event=None, buzzer_event=
     font = cv2.FONT_HERSHEY_SIMPLEX
     while status:
         status, img_raw = cap.read()
+        if show_status_status:
+            # cv2.namedWindow('frame', cv2.WINDOW_NORMAL)
+            cv2.namedWindow('Video', cv2.WINDOW_FREERATIO)
+            cv2.setWindowProperty('Video', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         if not status:
             print("Fin de proceso !!!")
             break
@@ -133,7 +138,14 @@ def run_on_video(Net, video_path, conf_thresh=0.5, led_event=None, buzzer_event=
 
         if show_status_status:
             try:
-                cv2.imshow('image', img_raw[:, :, ::-1])
+                if dim is None:
+                    scale_percent = 60  # percent of original size
+                    width = int(img_raw.shape[1] * scale_percent / 100)
+                    height = int(img_raw.shape[0] * scale_percent / 100)
+                    dim = (width, height)
+                # resize image
+                resized = cv2.resize(img_raw, dim, interpolation=cv2.INTER_AREA)
+                cv2.imshow('image', resized[:, :, ::-1])
             except cv2.error as ex:
                 print("Error al mostrar video: {}".format(ex))
             cv2.waitKey(1)
@@ -196,8 +208,11 @@ if __name__ == "__main__":
             if args.video_path == '1':
                 video_path = 1
 
-            # blink led twice to signal start on video
-            do_led(led_event, True)
+            if is_raspberrypi():
+                # sound buzzer
+                do_buzzer(buzzer_event)
+                # blink led twice to signal start on video
+                do_led(led_event, True)
 
             run_on_video(Net, video_path, conf_thresh=0.5, led_event=led_event, buzzer_event=buzzer_event)
     finally:
