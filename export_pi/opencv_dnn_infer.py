@@ -3,6 +3,7 @@
 ## $ python opencv_dnn_infer.py --img-mode 0 --video-path 0
 
 from datetime import datetime
+from utils import addImageWatermark
 
 import threading
 
@@ -107,6 +108,8 @@ def inference(net, image, conf_thresh=0.5, iou_thresh=0.4, target_shape=(160, 16
 def run_on_video(Net, video_path, conf_thresh=0.5, led_event=None, buzzer_event=None):
     cap = cv2.VideoCapture(video_path)
     dim = None
+    do_scale = False
+    add_logo_overlay = True
     if not cap.isOpened():
         raise ValueError("Falla al abrir video.")
         return
@@ -115,40 +118,50 @@ def run_on_video(Net, video_path, conf_thresh=0.5, led_event=None, buzzer_event=
     # add date to frame
     font = cv2.FONT_HERSHEY_SIMPLEX
     while status:
-        status, img_raw = cap.read()
+        if show_status_status is None:
+            show_status_status = show_status()
         if show_status_status:
             # cv2.namedWindow('frame', cv2.WINDOW_NORMAL)
-            cv2.namedWindow('Video', cv2.WINDOW_FREERATIO)
+            cv2.namedWindow('Video', cv2.WND_PROP_FULLSCREEN)
             cv2.setWindowProperty('Video', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        status, img_raw = cap.read()
         if not status:
             print("Fin de proceso !!!")
             break
         date_text = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
-        img_raw = cv2.rectangle(img_raw, pt1=(0, 0), pt2=(850, 59), color=(0, 0, 0), thickness=-1)
-        img_raw = cv2.putText(img_raw, date_text, (10, 40), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
+        img_raw = cv2.rectangle(img_raw, pt1=(0, 0), pt2=(850, 40), color=(0, 0, 0), thickness=-1)
+        img_raw = cv2.putText(img_raw, date_text, (10, 30), font, 0.7, (0, 255, 255), 2, cv2.LINE_AA)
         img_raw = cv2.cvtColor(img_raw, cv2.COLOR_BGR2RGB)
         img_raw, faces, masked = inference(Net, img_raw, target_shape=(260, 260), conf_thresh=conf_thresh,
                                            led_event=led_event, buzzer_event=buzzer_event)
         # write how many faces where found
-        img_raw = cv2.putText(img_raw, "Caras {}".format(faces), (400, 40), font, 1, (0, 255, 255), 2, cv2.LINE_AA)
-        img_raw = cv2.putText(img_raw, "Mascarillas {}".format(masked), (550, 40), font, 1, (255, 0, 255), 2,
+        img_raw = cv2.putText(img_raw, "Caras {}".format(faces), (320, 30), font, 0.7, (0, 255, 255), 2, cv2.LINE_AA)
+        img_raw = cv2.putText(img_raw, "Mascarillas {}".format(masked), (450, 30), font, 0.7, (255, 0, 255), 2,
                               cv2.LINE_AA)
-        if show_status_status is None:
-            show_status_status = show_status()
-
         if show_status_status:
             try:
-                if dim is None:
-                    scale_percent = 60  # percent of original size
-                    width = int(img_raw.shape[1] * scale_percent / 100)
-                    height = int(img_raw.shape[0] * scale_percent / 100)
-                    dim = (width, height)
-                # resize image
-                resized = cv2.resize(img_raw, dim, interpolation=cv2.INTER_AREA)
-                cv2.imshow('image', resized[:, :, ::-1])
+                # add logo overlay
+                if add_logo_overlay:
+                    img_raw = addImageWatermark('./logo.png', img_raw, 100, (10,40))
+                if do_scale:
+                    if dim is None:
+                        scale_percent = 80  # percent of original size
+                        width = int(img_raw.shape[1] * scale_percent / 100)
+                        height = int(img_raw.shape[0] * scale_percent / 100)
+                        dim = (width, height)
+                    # resize image
+                    resized = cv2.resize(img_raw, dim, interpolation=cv2.INTER_AREA)
+                    cv2.imshow('Video', resized[:, :, ::-1])
+                else:
+                    cv2.imshow('Video', img_raw[:, :, ::-1])
             except cv2.error as ex:
                 print("Error al mostrar video: {}".format(ex))
-            cv2.waitKey(1)
+            k = cv2.waitKey(33)
+            if k==27:   # Esc key to stop
+                break
+            if (k & 0xFF) == ord('l'):
+                # toggle logo overlay
+                add_logo_overlay = not add_logo_overlay
         print("faces: {}, masked: {}".format(faces, masked), end='\r')
     cv2.destroyAllWindows()
 
