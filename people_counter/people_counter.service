@@ -1,0 +1,14 @@
+[Unit]
+Description=People Counter Service
+After=multi-user.target
+
+[Service]
+User=pi
+Type=idle
+
+WorkingDirectory=/home/pi/people_counter
+ExecStart=/home/pi/people_counter/run_service.sh
+
+Restart=always
+[Install]
+WantedBy=multi-user.target

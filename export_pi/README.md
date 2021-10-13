@@ -1,10 +1,21 @@
 # OpenCV DNN Infer
 
-Install requirements
+### Install system requirements
+
+Install OpenCV and camera support libraries. ref https://www.pantechsolutions.net/blog/installing-library-packages-in-raspberry-pi/
+
+    # apt install libqtgui4 libqt4-test
+    # apt install fswebcam
+    # apt install -y libatlas-base-dev libhdf5-dev libhdf5-serial-dev libatlas-base-dev libjasper-dev  libqtgui4  libqt4-test libopenjp2-7 libilmbase23 libopenexr-dev python3-opencv
+
+Disable screensaver lock screen on Ubuntu-Mate
+    $ gsettings set org.mate.screensaver lock-enabled false
+
+### Install app requirements
 
     $ pip install -r requirements.txt
 
-sudo apt-get install python3-rpi.gpio
+    $ sudo apt-get install python3-rpi.gpio
 
 run command:
 

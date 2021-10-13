@@ -116,7 +116,7 @@ while True:
     cv2.putText(Frame, "Salidas: {}".format(str(ExitCounter)), (350, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (250, 250, 250), 1)
     cv2.imshow("Original Frame", Frame)
-    cv2.waitKey(1);
+    cv2.waitKey(1)
 
 # cleanup the camera and close any open windows
 camera.release()
