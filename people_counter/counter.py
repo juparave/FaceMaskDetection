@@ -11,6 +11,7 @@ class Counter():
     last = None
     entering_max = 0
     exiting_max = 0
+    delayed = []
 
     def __init__(self) -> None:
         self.last = dt.datetime.now()
@@ -32,20 +33,32 @@ class Counter():
         
     def post_now(self):
         now = dt.datetime.now()
-        response = requests.get(URL +
-                        "/" +
-                        DEVICE +
-                        "/" +
-                        NAME + 
-                        "/" +
-                        str(self.entering_max) +
-                        "/" +
-                        str(self.exiting_max) +
-                        "/" +
-                        now.isoformat() +
-                        "/" +
-                        VERSION)
-        print(response)
+        try:
+            data_url = ("/" +
+                            DEVICE +
+                            "/" +
+                            NAME + 
+                            "/" +
+                            str(self.entering_max) +
+                            "/" +
+                            str(self.exiting_max) +
+                            "/" +
+                            now.isoformat() +
+                            "/" +
+                            VERSION)
+            for delayed_data in self.delayed[:]:
+                response = requests.get(URL + data_url)
+                if response.ok:
+                    # remove delayed_data from delayed
+                    self.delayed.remove(delayed_data)
+                else:
+                    raise
+
+            print(response)
+        except:
+            print("Error updating... Do I have Internet conection?")
+            # save data_url for later
+            self.delayed.append(data_url)
 
     def post_pending(self):
         now = dt.datetime.now()

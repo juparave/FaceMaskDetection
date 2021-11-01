@@ -4,4 +4,6 @@ argparse==1.4.0
 imutils==0.5.3
 dlib==19.18.0
 opencv-python==4.5.3.56
+pybind11==2.8.1
+requests==2.26.0
 scipy==1.4.1
