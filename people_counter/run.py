@@ -31,6 +31,7 @@ def run():
 		help="minimum probability to filter weak detections")
 	ap.add_argument("-s", "--skip-frames", type=int, default=30,
 		help="# of skip frames between detections")
+	ap.add_argument("-d", "--device", default="cpu", help="Device to inference on")
 	args = vars(ap.parse_args())
 
 	# initialize the list of class labels MobileNet SSD was trained to
@@ -42,6 +43,14 @@ def run():
 
 	# load our serialized model from disk
 	net = cv2.dnn.readNetFromCaffe(args["prototxt"], args["model"])
+
+	if args["device"] == "cpu":
+		net.setPreferableBackend(cv2.dnn.DNN_TARGET_CPU)
+		print("[INFO] Using CPU device")
+	elif args["device"] == "gpu":
+		net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+		net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+		print("[INFO] Using GPU device")
 
 	# if a video path was not supplied, grab a reference to the ip camera
 	if not args.get("input", False):
