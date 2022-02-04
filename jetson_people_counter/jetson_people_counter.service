@@ -1,0 +1,14 @@
+[Unit]
+Description=People Counter Service
+After=multi-user.target
+
+[Service]
+User=master
+Type=idle
+
+WorkingDirectory=/home/master/workspace/python/jetson_people_counter
+ExecStart=/home/master/workspace/python/jetson_people_counter/run_service.sh
+
+Restart=always
+[Install]
+WantedBy=multi-user.target
