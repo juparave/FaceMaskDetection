@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 cd /home/master/workspace/python/jetson_people_counter
 export DISPLAY=:0

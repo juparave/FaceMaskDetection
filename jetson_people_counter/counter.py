@@ -1,12 +1,47 @@
 import datetime as dt
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+import http as HTTP
 
 URL="https://counter.solucionesmaster.com.mx/api/v1/count/"
 DEVICE="jetson2gb"
 NAME="proto"
 VERSION="0.1"
+DEFAULT_TIMEOUT = 5 # seconds
+
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS"]
+)
+
+# enabling http debug
+HTTP.client.HTTPConnection.debuglevel = 1
+
+
+class TimeoutHTTPAdapter(HTTPAdapter):
+    def __init__(self, *args, **kwargs):
+        self.timeout = DEFAULT_TIMEOUT
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
+            del kwargs["timeout"]
+        super().__init__(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        timeout = kwargs.get("timeout")
+        if timeout is None:
+            kwargs["timeout"] = self.timeout
+        return super().send(request, **kwargs)
+
 
 class Counter():
+    # Mount it for both http and https usage
+    adapter = TimeoutHTTPAdapter(timeout=2.5, max_retries=retry_strategy)
+    http = requests.Session()
+    http.mount("https://", adapter)
+    http.mount("http://", adapter)
 
     last = None
     entering_max = 0
@@ -33,32 +68,31 @@ class Counter():
         
     def post_now(self):
         now = dt.datetime.now()
+        data_url = ("/" +
+                        DEVICE +
+                        "/" +
+                        NAME + 
+                        "/" +
+                        str(self.entering_max) +
+                        "/" +
+                        str(self.exiting_max) +
+                        "/" +
+                        now.isoformat() +
+                        "/" +
+                        VERSION)
+        self.delayed.append(data_url)
         try:
-            data_url = ("/" +
-                            DEVICE +
-                            "/" +
-                            NAME + 
-                            "/" +
-                            str(self.entering_max) +
-                            "/" +
-                            str(self.exiting_max) +
-                            "/" +
-                            now.isoformat() +
-                            "/" +
-                            VERSION)
             for delayed_data in self.delayed[:]:
-                response = requests.get(URL + data_url)
-                if response.ok:
+                response = self.http.get(URL + delayed_data)
+                if response and response.ok:
                     # remove delayed_data from delayed
                     self.delayed.remove(delayed_data)
+                    print(response)
                 else:
                     raise
 
-            print(response)
         except:
             print("Error updating... Do I have Internet conection?")
-            # save data_url for later
-            self.delayed.append(data_url)
 
     def post_pending(self):
         now = dt.datetime.now()

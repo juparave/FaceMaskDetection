@@ -297,11 +297,11 @@ def main():
         parser.parse(spec['tmp_uff'], network)
         # engine = builder.build_cuda_engine(network)
         plan = builder.build_serialized_network(network, config)
-        engine = builder.deserialize_cuda_engine(plan)
-
-        buf = engine.serialize()
-        with open(spec['output_bin'], 'wb') as f:
-            f.write(buf)
+        with trt.Runtime(TRT_LOGGER) as runtime:
+            engine = runtime.deserialize_cuda_engine(plan)
+            buf = engine.serialize()
+            with open(spec['output_bin'], 'wb') as f:
+                f.write(buf)
 
 
 if __name__ == '__main__':

@@ -238,6 +238,7 @@ def get_frame(condition):
             if condition.wait(timeout=MAIN_THREAD_TIMEOUT):
                 img, boxes = s_img, s_boxes
             else:
+                counter.post_pending()
                 raise SystemExit('ERROR: timeout waiting for img from child')
         boxes = np.array(boxes)
 
@@ -339,8 +340,12 @@ def gstreamer_pipeline(
 
 if __name__ == '__main__':
     model = 'ssd_mobilenet_v1_coco'
-    cam = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
-    
+    cam = cv2.VideoCapture(0)
+    # cam = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+    # cam = cv2.VideoCapture("../people_counter/videos/example_01.mp4")
+    cv2.namedWindow('Video', cv2.WND_PROP_FULLSCREEN)
+    cv2.setWindowProperty('Video', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
     if not cam.isOpened():
         raise SystemExit('ERROR: failed to open camera!')
 
@@ -354,7 +359,8 @@ if __name__ == '__main__':
     trt_thread.stop()   # stop the child thread
 
     # last post to counter before quiting
-    counter.post_now()
+    counter.post_pending()
 
+    print("Quiting jetson_people_counter")
     cam.release()
     cv2.destroyAllWindows()
