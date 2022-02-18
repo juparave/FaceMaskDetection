@@ -7,7 +7,7 @@ import http as HTTP
 URL="https://counter.solucionesmaster.com.mx/api/v1/count/"
 DEVICE="jetson2gb"
 NAME="proto"
-VERSION="0.1"
+VERSION="0.2"
 DEFAULT_TIMEOUT = 5 # seconds
 
 retry_strategy = Retry(
@@ -65,7 +65,7 @@ class Counter():
             self.entering_max = 0
             self.exiting_max = 0
             self.last = dt.datetime.now()
-        
+
     def post_now(self):
         now = dt.datetime.now()
         data_url = ("/" +
@@ -97,8 +97,8 @@ class Counter():
     def post_pending(self):
         now = dt.datetime.now()
         if (now > (self.last + dt.timedelta(minutes=1))):
-            if self.exiting_max != 0 or self.entering_max != 0:
-                self.post_now()
-                self.entering_max = 0
-                self.exiting_max = 0
-                self.last = now
+            # if self.exiting_max != 0 or self.entering_max != 0:
+            self.post_now()
+            self.entering_max = 0
+            self.exiting_max = 0
+            self.last = now
