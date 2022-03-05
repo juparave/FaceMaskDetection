@@ -68,8 +68,8 @@ def run():
 
     # otherwise, grab a reference to the video file
     else:
-        print("[INFO] Starting the video..")
-        vs = cv2.VideoCapture(args["input"])
+        print("[INFO] Starting the video on input %s.." % args["input"])
+        vs = cv2.VideoCapture(int(args["input"]))
 
     # initialize the video writer (we'll instantiate later if need be)
     writer = None
@@ -111,6 +111,7 @@ def run():
         # if we are viewing a video and we did not grab a frame then we
         # have reached the end of the video
         if args["input"] is not None and frame is None:
+            print("[INFO] no frame, breaking...")
             break
 
         # resize the frame to have a maximum width of 500 pixels (the
@@ -321,7 +322,7 @@ def run():
             writer.write(frame)
 
         # show the output frame
-        cv2.imshow("People Counter/Master Electrónicos", frame)
+        cv2.imshow("People Counter/Master Electronicos", frame)
         key = cv2.waitKey(1) & 0xFF
 
         # if the `q` key was pressed, break from the loop
