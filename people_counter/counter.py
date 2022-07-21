@@ -2,7 +2,7 @@ import datetime as dt
 import requests
 
 URL="https://counter.solucionesmaster.com.mx/api/v1/count/"
-DEVICE="pi4"
+DEVICE="dell_notebook"
 NAME="proto"
 VERSION="0.1"
 

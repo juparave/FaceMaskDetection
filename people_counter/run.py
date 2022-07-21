@@ -37,7 +37,7 @@ def run():
     # confidence default 0.4
     ap.add_argument("-c", "--confidence", type=float, default=0.4,
                     help="minimum probability to filter weak detections")
-    ap.add_argument("-s", "--skip-frames", type=int, default=30,
+    ap.add_argument("-s", "--skip-frames", type=int, default=12,
                     help="# of skip frames between detections")
     ap.add_argument("-d", "--device", default="cpu", help="Device to inference on")
     args = vars(ap.parse_args())
@@ -68,8 +68,15 @@ def run():
 
     # otherwise, grab a reference to the video file
     else:
-        print("[INFO] Starting the video on input %s.." % args["input"])
-        vs = cv2.VideoCapture(int(args["input"]))
+        video_input = args["input"]
+        try:
+            # try to get int value from args input
+            video_input = int(video_input)
+        except Exception as e:
+            # if no int value then leave it
+            pass
+        print("[INFO] Starting the video on input %s.." % video_input)
+        vs = cv2.VideoCapture(video_input)
 
     # initialize the video writer (we'll instantiate later if need be)
     writer = None
@@ -117,7 +124,7 @@ def run():
         # resize the frame to have a maximum width of 500 pixels (the
         # less data we have, the faster we can process it), then convert
         # the frame from BGR to RGB for dlib
-        frame = imutils.resize(frame, width=500)
+        frame = imutils.resize(frame, width=600)
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         # if the frame dimensions are empty, set them
